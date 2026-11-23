@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>生理ノート｜2人分の周期記録と予測</title>
+<style>
+  :root{
+    --bg:#fdf6f8; --card:#ffffff; --ink:#4a3540; --muted:#a58a97;
+    --pink:#f2789f; --pink-soft:#fde7ee; --lav:#8f7fe0; --lav-soft:#ece8fb;
+    --amber:#e8a13a; --line:#f3dde4; --shadow:0 2px 10px rgba(190,110,140,.10);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{margin:0; font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif; background:var(--bg); color:var(--ink); font-size:15px; line-height:1.55}
+  .wrap{max-width:560px; margin:0 auto; padding:14px 14px 90px}
+  header.top{display:flex; align-items:center; justify-content:space-between; padding:6px 2px 10px}
+  h1{font-size:20px; margin:0; letter-spacing:.02em}
+  h1 .sub{display:block; font-size:11px; color:var(--muted); font-weight:normal; margin-top:2px}
+  .ptabs{display:flex; gap:8px; margin:4px 0 12px}
+  .ptab{flex:1; border:2px solid var(--line); background:var(--card); border-radius:999px; padding:9px 6px; font-size:14px; font-weight:600; color:var(--muted); cursor:pointer; text-align:center}
+  .ptab.on{color:#fff; border-color:transparent}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:var(--shadow)}
+  .status-big{font-size:22px; font-weight:700; margin:2px 0 4px}
+  .status-sub{color:var(--muted); font-size:13px}
+  .stats{display:flex; gap:8px; margin-top:10px}
+  .stat{flex:1; background:var(--bg); border-radius:12px; padding:8px 6px; text-align:center}
+  .stat b{display:block; font-size:17px}
+  .stat span{font-size:11px; color:var(--muted)}
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px}
+  .cal-head b{font-size:16px}
+  .navbtn{border:1px solid var(--line); background:var(--card); border-radius:10px; width:34px; height:34px; font-size:16px; cursor:pointer; color:var(--ink)}
+  table.cal{width:100%; border-collapse:separate; border-spacing:2px; table-layout:fixed}
+  table.cal th{font-size:11px; color:var(--muted); font-weight:600; padding:3px 0}
+  table.cal td{height:44px; text-align:center; vertical-align:top; border-radius:10px; font-size:13px; padding-top:5px; position:relative; cursor:pointer}
+  td.dim{color:#d8c3cc}
+  td.period{color:#fff; font-weight:700}
+  td.pred{background:var(--pink-soft); border:1.5px dashed var(--pink); color:var(--ink)}
+  td.today{box-shadow:inset 0 0 0 2px var(--ink)}
+  td.sel{outline:2px solid var(--amber); outline-offset:-2px}
+  td .dot{position:absolute; left:50%; bottom:4px; transform:translateX(-50%); width:5px; height:5px; border-radius:50%}
+  td .pmsdot{background:var(--amber)}
+  td .logmark{position:absolute; right:4px; top:3px; font-size:8px; color:var(--amber)}
+  .legend{font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:10px; margin-top:6px}
+  .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:3px; vertical-align:-1px}
+  .btn{display:inline-block; border:none; border-radius:999px; padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer; background:var(--pink); color:#fff}
+  .btn.ghost{background:var(--card); color:var(--ink); border:1.5px solid var(--line)}
+  .btn.small{padding:7px 13px; font-size:13px}
+  .btn:disabled{opacity:.45}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .grow{flex:1}
+  label.f{display:block; font-size:12px; color:var(--muted); margin:10px 0 4px}
+  input[type="date"], input[type="text"], textarea{width:100%; border:1.5px solid var(--line); border-radius:10px; padding:9px 10px; font-size:15px; font-family:inherit; background:#fff; color:var(--ink)}
+  textarea{min-height:64px; resize:vertical}
+  .plist{list-style:none; margin:0; padding:0}
+  .plist li{display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px dashed var(--line)}
+  .plist li:last-child{border-bottom:none}
+  .del{border:none; background:#fdf0f3; color:#c2436c; border-radius:8px; padding:5px 9px; font-size:12px; cursor:pointer}
+  nav.bottom{position:fixed; left:0; right:0; bottom:0; background:rgba(255,255,255,.96); border-top:1px solid var(--line); display:flex; z-index:30}
+  nav.bottom button{flex:1; border:none; background:none; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); font-size:13px; font-weight:600; color:var(--muted); cursor:pointer}
+  nav.bottom button.on{color:var(--pink)}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0}
+  .chip{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:8px 14px; font-size:14px; cursor:pointer}
+  .chip.on{background:var(--pink); border-color:var(--pink); color:#fff; font-weight:600}
+  .overlay{position:fixed; inset:0; background:rgba(60,30,45,.45); display:none; align-items:flex-end; justify-content:center; z-index:50}
+  .overlay.open{display:flex}
+  .sheet{background:#fff; width:100%; max-width:560px; border-radius:20px 20px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); max-height:88vh; overflow:auto}
+  .sheet h3{margin:0 0 4px; font-size:17px}
+  .prog{display:flex; gap:5px; margin:10px 0 4px}
+  .prog i{flex:1; height:5px; border-radius:3px; background:var(--line)}
+  .prog i.done{background:var(--pink)}
+  .note{font-size:12px; color:var(--muted)}
+  .toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%); background:#4a3540; color:#fff; padding:9px 16px; border-radius:999px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:60; max-width:88vw; text-align:center}
+  .toast.show{opacity:1}
+  .empty{color:var(--muted); text-align:center; padding:16px 6px; font-size:13px}
+  .kv{font-size:13px; margin:3px 0}
+  .kv b{color:var(--muted); font-weight:600; margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>生理ノート<span class="sub">2人分の周期記録と、次回の目安</span></h1>
+  </header>
+
+  <div class="ptabs" id="ptabs"></div>
+
+  <section id="view-home">
+    <div class="card" id="status-card"></div>
+    <div class="card">
+      <div class="cal-head">
+        <button class="navbtn" id="cal-prev" aria-label="前の月">‹</button>
+        <b id="cal-title"></b>
+        <button class="navbtn" id="cal-next" aria-label="次の月">›</button>
+      </div>
+      <table class="cal" id="cal"></table>
+      <div class="legend">
+        <span><i id="lg-period"></i>生理期間</span>
+        <span><i style="background:var(--pink-soft);border:1px dashed var(--pink)"></i>次回の予測</span>
+        <span><i style="background:var(--amber);border-radius:50%"></i>生理前の時期</span>
+        <span>✦ その日のチェックあり</span>
+      </div>
+    </div>
+    <div class="card" id="day-panel"></div>
+  </section>
+
+  <section id="view-records" style="display:none">
+    <div class="card">
+      <b>生理期間を追加</b>
+      <label class="f">開始日</label>
+      <input type="date" id="add-start">
+      <label class="f">終了日</label>
+      <input type="date" id="add-end">
+      <div style="margin-top:12px"><button class="btn" id="add-btn">追加する</button></div>
+      <p class="note">開始日だけ入れて、終わったら終了日を追加しても大丈夫です（終了日はあとから編集できます）。</p>
+    </div>
+    <div class="card">
+      <b>記録一覧</b>
+      <ul class="plist" id="plist"></ul>
+    </div>
+  </section>
+
+  <section id="view-data" style="display:none">
+    <div class="card">
+      <b>プロフィールの名前</b>
+      <label class="f">1人目</label>
+      <input type="text" id="name-0" maxlength="12">
+      <label class="f">2人目</label>
+      <input type="text" id="name-1" maxlength="12">
+      <div style="margin-top:12px"><button class="btn small" id="name-save">名前を保存</button></div>
+    </div>
+    <div class="card">
+      <b>パートナーとシェア</b>
+      <p class="note">記録をファイルに書き出して送ると、相手のスマホでも同じ記録を見られます。読み込むと今のデータは置き換わります。</p>
+      <div class="row">
+        <button class="btn ghost small" id="export-btn">書き出す</button>
+        <label class="btn ghost small" for="import-file" style="cursor:pointer">読み込む</label>
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+      </div>
+    </div>
+    <div class="card">
+      <b>おためし・リセット</b>
+      <p class="note">サンプルは架空の記録です。どんなアプリか試すときにどうぞ。</p>
+      <div class="row">
+        <button class="btn ghost small" id="sample-btn">サンプルデータで試す</button>
+        <button class="btn ghost small" id="wipe-btn">全データを消す</button>
+      </div>
+    </div>
+    <div class="card">
+      <b>このアプリについて</b>
+      <p class="note">次回の予測は、記録した周期の平均から計算した「目安」です。体調の変化などでずれることがあります。データはこの端末の中だけに保存され、外部に送信されることはありません。</p>
+    </div>
+  </section>
+</div>
+
+<nav class="bottom">
+  <button id="nav-home" class="on">ホーム</button>
+  <button id="nav-records">記録</button>
+  <button id="nav-data">データ</button>
+</nav>
+
+<div class="overlay" id="wizard">
+  <div class="sheet">
+    <h3 id="wz-title">今日のチェック</h3>
+    <div class="prog" id="wz-prog"></div>
+    <div id="wz-body"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost" id="wz-back">もどる</button>
+      <span class="grow"></span>
+      <button class="btn ghost" id="wz-cancel">やめる</button>
+      <button class="btn" id="wz-next">次へ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============ データ ============ */
+var LS_KEY = "seiri-note-v1";
+function defaultState() {
+  return { current: 0, profiles: [
+    { name: "わたし", color: "#f2789f", periods: [], logs: {} },
+    { name: "パートナー", color: "#8f7fe0", periods: [], logs: {} }
+  ]};
+}
+function loadState() {
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (!raw) return defaultState();
+    var s = JSON.parse(raw);
+    if (!s || !Array.isArray(s.profiles) || s.profiles.length !== 2) return defaultState();
+    s.profiles.forEach(function(p) {
+      if (!Array.isArray(p.periods)) p.periods = [];
+      if (!p.logs || typeof p.logs !== "object") p.logs = {};
+      if (typeof p.name !== "string" || !p.name) p.name = "わたし";
+      if (typeof p.color !== "string") p.color = "#f2789f";
+    });
+    if (s.current !== 0 && s.current !== 1) s.current = 0;
+    return s;
+  } catch (e) { return defaultState(); }
+}
+var state = loadState();
+function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+function prof() { return state.profiles[state.current]; }
+
+/* ============ 日付ユーティリティ ============ */
+function parseD(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function fmtD(d) {
+  function z(n) { return (n < 10 ? "0" : "") + n; }
+  return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate());
+}
+function todayStr() { return fmtD(new Date()); }
+function addDays(s, n) { var d = parseD(s); d.setDate(d.getDate() + n); return fmtD(d); }
+function diffDays(a, b) { return Math.round((parseD(a) - parseD(b)) / 86400000); }
+function jpDate(s) { var d = parseD(s); return (d.getMonth() + 1) + "月" + d.getDate() + "日"; }
+var WD = ["日", "月", "火", "水", "木", "金", "土"];
+function jpDateW(s) { var d = parseD(s); return jpDate(s) + "（" + WD[d.getDay()] + "）"; }
+function esc(t) { return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+/* ============ 周期の計算（純粋関数） ============ */
+function sortedPeriods(p) {
+  return p.periods.slice().sort(function(a, b) { return a.start < b.start ? -1 : 1; });
+}
+function computeStats(p) {
+  var ps = sortedPeriods(p);
+  var intervals = [], durations = [];
+  ps.forEach(function(r, i) {
+    durations.push(diffDays(r.end, r.start) + 1);
+    if (i > 0) intervals.push(diffDays(r.start, ps[i - 1].start));
+  });
+  function avg(a) { return a.length ? Math.round(a.reduce(function(x, y) { return x + y; }, 0) / a.length) : null; }
+  var avgCycle = avg(intervals), avgDur = avg(durations);
+  var last = ps.length ? ps[ps.length - 1] : null;
+  var nextStart = (last && avgCycle) ? addDays(last.start, avgCycle) : null;
+  return {
+    count: ps.length, avgCycle: avgCycle, avgDur: avgDur,
+    lastStart: last ? last.start : null, lastEnd: last ? last.end : null,
+    nextStart: nextStart,
+    pmsStart: nextStart ? addDays(nextStart, -7) : null,
+    predEnd: (nextStart && avgDur) ? addDays(nextStart, avgDur - 1) : null
+  };
+}
+function periodOn(p, dateStr) {
+  for (var i = 0; i < p.periods.length; i++) {
+    var r = p.periods[i];
+    if (dateStr >= r.start && dateStr <= r.end) return r;
+  }
+  return null;
+}
+function statusOf(p, today) {
+  var st = computeStats(p);
+  var on = periodOn(p, today);
+  if (on) return { kind: "in", day: diffDays(today, on.start) + 1, stats: st };
+  if (st.nextStart) {
+    var until = diffDays(st.nextStart, today);
+    if (until < 0) return { kind: "overdue", days: -until, stats: st };
+    if (today >= st.pmsStart) return { kind: "pms", until: until, stats: st };
+    return { kind: "wait", until: until, stats: st };
+  }
+  return { kind: "none", stats: st };
+}
+
+/* ============ 画面描画 ============ */
+function $(id) { return document.getElementById(id); }
+var viewY = null, viewM = null, selDate = todayStr();
+(function() { var t = new Date(); viewY = t.getFullYear(); viewM = t.getMonth(); })();
+
+var toastTimer = null;
+function toast(msg) {
+  var el = $("toast"); el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(function() { el.classList.remove("show"); }, 2400);
+}
+
+function renderTabs() {
+  $("ptabs").innerHTML = state.profiles.map(function(p, i) {
+    var on = i === state.current;
+    return '<button class="ptab' + (on ? " on" : "") + '" data-ptab="' + i + '"' +
+      (on ? ' style="background:' + p.color + '"' : "") + '>' + esc(p.name) + '</button>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("[data-ptab]"), function(b) {
+    b.addEventListener("click", function() {
+      state.current = +b.getAttribute("data-ptab"); save(); renderAll();
+    });
+  });
+}
+
+function renderStatus() {
+  var p = prof(), s = statusOf(p, todayStr()), st = s.stats;
+  var big = "", sub = "";
+  if (s.kind === "in") { big = "生理中 " + s.day + "日目"; sub = "無理しないで過ごしてね"; }
+  else if (s.kind === "wait") { big = "次回まで あと" + s.until + "日"; sub = "開始の目安：" + jpDateW(st.nextStart); }
+  else if (s.kind === "pms") { big = "生理前の時期"; sub = "次回は " + jpDateW(st.nextStart) + " ごろの目安（あと" + s.until + "日）"; }
+  else if (s.kind === "overdue") { big = "目安から " + s.days + "日 経過"; sub = "開始したら記録してね。目安：" + jpDateW(st.nextStart) + " でした"; }
+  else { big = "まだ記録がありません"; sub = "「記録」タブから生理期間を入れると、次回の目安が出ます"; }
+  $("status-card").innerHTML =
+    '<div class="status-sub">' + esc(p.name) + ' の様子</div>' +
+    '<div class="status-big">' + big + '</div>' +
+    '<div class="status-sub">' + sub + '</div>' +
+    '<div class="stats">' +
+      '<div class="stat"><b>' + (st.avgCycle ? st.avgCycle + "日" : "―") + '</b><span>平均周期</span></div>' +
+      '<div class="stat"><b>' + (st.avgDur ? st.avgDur + "日" : "―") + '</b><span>平均期間</span></div>' +
+      '<div class="stat"><b>' + st.count + '回</b><span>記録した回数</span></div>' +
+    '</div>';
+  $("lg-period").style.background = p.color;
+}
+
+function renderCal() {
+  var p = prof(), st = computeStats(p);
+  $("cal-title").textContent = viewY + "年" + (viewM + 1) + "月";
+  var first = new Date(viewY, viewM, 1);
+  var startDay = first.getDay();
+  var daysInMonth = new Date(viewY, viewM + 1, 0).getDate();
+  var prevDays = new Date(viewY, viewM, 0).getDate();
+  var html = "<tr>" + WD.map(function(w) { return "<th>" + w + "</th>"; }).join("") + "</tr>";
+  var cellDate = function(offset) {
+    return fmtD(new Date(viewY, viewM, 1 - startDay + offset));
+  };
+  for (var w = 0; w < 6; w++) {
+    html += "<tr>";
+    for (var d = 0; d < 7; d++) {
+      var idx = w * 7 + d, ds = cellDate(idx);
+      var inMonth = parseD(ds).getMonth() === viewM;
+      var cls = [], dots = "";
+      if (!inMonth) cls.push("dim");
+      if (periodOn(p, ds)) { cls.push("period"); }
+      else if (st.nextStart && ds >= st.nextStart && ds <= st.predEnd) cls.push("pred");
+      if (st.pmsStart && st.nextStart && ds >= st.pmsStart && ds < st.nextStart) dots += '<span class="dot pmsdot"></span>';
+      if (ds === todayStr()) cls.push("today");
+      if (ds === selDate) cls.push("sel");
+      var logMark = p.logs[ds] ? '<span class="logmark">✦</span>' : "";
+      var style = periodOn(p, ds) ? ' style="background:' + p.color + '"' : "";
+      html += '<td class="' + cls.join(" ") + '" data-date="' + ds + '"' + style + '>' + parseD(ds).getDate() + dots + logMark + '</td>';
+    }
+    html += "</tr>";
+    if (w === 5) break;
+  }
+  $("cal").innerHTML = html;
+  Array.prototype.forEach.call(document.querySelectorAll("#cal td[data-date]"), function(td) {
+    td.addEventListener("click", function() {
+      selDate = td.getAttribute("data-date");
+      var dd = parseD(selDate); viewY = dd.getFullYear(); viewM = dd.getMonth();
+      renderCal(); renderDay();
+    });
+  });
+}
+
+function renderDay() {
+  var p = prof(), log = p.logs[selDate], on = periodOn(p, selDate);
+  var rows = "";
+  if (on) rows += '<div class="kv"><b>生理</b>' + jpDateW(on.start) + " 〜 " + jpDateW(on.end) + '</div>';
+  if (log) {
+    if (log.condition && log.condition.length) rows += '<div class="kv"><b>体調</b>' + esc(log.condition.join("・")) + '</div>';
+    if (log.pain && log.pain.length) rows += '<div class="kv"><b>痛み</b>' + esc(log.pain.join("・")) + '</div>';
+    if (log.mood && log.mood.length) rows += '<div class="kv"><b>気分</b>' + esc(log.mood.join("・")) + '</div>';
+    if (log.memo) rows += '<div class="kv"><b>メモ</b>' + esc(log.memo) + '</div>';
+  }
+  if (!rows) rows = '<div class="empty">この日の記録はまだありません</div>';
+  $("day-panel").innerHTML =
+    '<b>' + jpDateW(selDate) + '</b>' + rows +
+    '<div class="row" style="margin-top:10px">' +
+      '<button class="btn small" id="day-check">この日のチェックを入力</button>' +
+      (on ? '' : '<button class="btn ghost small" id="day-start">この日から生理開始</button>') +
+    '</div>';
+  $("day-check").addEventListener("click", function() { openWizard(selDate); });
+  var sb = $("day-start");
+  if (sb) sb.addEventListener("click", function() {
+    prof().periods.push({ start: selDate, end: selDate });
+    save(); renderAll(); toast("開始日を記録しました。終わったら記録タブで終了日を直してね");
+  });
+}
+
+function renderRecords() {
+  var p = prof();
+  var ps = p.periods.slice().sort(function(a, b) { return a.start < b.start ? 1 : -1; });
+  if (!ps.length) { $("plist").innerHTML = '<li class="empty" style="border:none">まだ記録がありません</li>'; return; }
+  $("plist").innerHTML = ps.map(function(r) {
+    var days = diffDays(r.end, r.start) + 1;
+    return '<li><span class="grow">' + jpDateW(r.start) + ' 〜 ' + jpDateW(r.end) + '（' + days + '日間）</span>' +
+      '<button class="del" data-del="' + r.start + '">消す</button></li>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll("[data-del]"), function(b) {
+    b.addEventListener("click", function() {
+      var s = b.getAttribute("data-del");
+      prof().periods = prof().periods.filter(function(r) { return r.start !== s; });
+      save(); renderAll(); toast("記録を消しました");
+    });
+  });
+}
+
+function renderNames() { $("name-0").value = state.profiles[0].name; $("name-1").value = state.profiles[1].name; }
+function renderAll() { renderTabs(); renderStatus(); renderCal(); renderDay(); renderRecords(); }
+
+function showView(v) {
+  ["home", "records", "data"].forEach(function(k) {
+    $("view-" + k).style.display = k === v ? "" : "none";
+    $("nav-" + k).classList.toggle("on", k === v);
+  });
+  if (v === "data") renderNames();
+}
+
+/* ============ チェック入力（質問形式ウィザード） ============ */
+var WZ_STEPS = [
+  { key: "condition", q: "体調はどう？", opts: ["元気", "ふつう", "だるい", "しんどい"], multi: true },
+  { key: "pain", q: "痛みはある？", opts: ["頭痛", "腹痛", "子宮の痛み", "胃痛", "腰痛", "特になし"], multi: true, noneOpt: "特になし" },
+  { key: "mood", q: "気分はどう？", opts: ["穏やか", "元気", "イライラ", "落ち込み", "不安", "眠い"], multi: true },
+  { key: "memo", q: "メモがあればどうぞ（任意）", memo: true }
+];
+var wz = null;
+function openWizard(dateStr) {
+  var old = prof().logs[dateStr] || {};
+  wz = { date: dateStr, step: 0, ans: {
+    condition: (old.condition || []).slice(), pain: (old.pain || []).slice(),
+    mood: (old.mood || []).slice(), memo: old.memo || ""
+  }};
+  $("wizard").classList.add("open");
+  renderWizard();
+}
+function closeWizard() { $("wizard").classList.remove("open"); wz = null; }
+function renderWizard() {
+  var st = WZ_STEPS[wz.step];
+  $("wz-title").textContent = jpDateW(wz.date) + " のチェック（" + (wz.step + 1) + "/" + WZ_STEPS.length + "）";
+  $("wz-prog").innerHTML = WZ_STEPS.map(function(_, i) { return '<i class="' + (i <= wz.step ? "done" : "") + '"></i>'; }).join("");
+  var body = '<p style="margin:6px 0 2px"><b>' + st.q + '</b></p>';
+  if (st.memo) {
+    body += '<textarea id="wz-memo" placeholder="自由に書いてね">' + esc(wz.ans.memo) + '</textarea>';
+  } else {
+    body += '<div class="chips">' + st.opts.map(function(o) {
+      var on = wz.ans[st.key].indexOf(o) >= 0;
+      return '<button class="chip' + (on ? " on" : "") + '" data-opt="' + esc(o) + '">' + esc(o) + '</button>';
+    }).join("") + '</div><p class="note">複数選べます</p>';
+  }
+  $("wz-body").innerHTML = body;
+  if (st.memo) {
+    $("wz-memo").addEventListener("input", function(e) { wz.ans.memo = e.target.value; });
+  } else {
+    Array.prototype.forEach.call(document.querySelectorAll("#wz-body [data-opt]"), function(b) {
+      b.addEventListener("click", function() {
+        var v = b.getAttribute("data-opt"), arr = wz.ans[st.key];
+        var i = arr.indexOf(v);
+        if (st.noneOpt && v === st.noneOpt) { wz.ans[st.key] = i >= 0 ? [] : [v]; }
+        else {
+          if (i >= 0) arr.splice(i, 1); else arr.push(v);
+          if (st.noneOpt) { var ni = arr.indexOf(st.noneOpt); if (ni >= 0) arr.splice(ni, 1); }
+        }
+        renderWizard();
+      });
+    });
+  }
+  $("wz-back").disabled = wz.step === 0;
+  $("wz-next").textContent = wz.step === WZ_STEPS.length - 1 ? "保存する" : "次へ";
+}
+function wizardNext() {
+  if (wz.step < WZ_STEPS.length - 1) { wz.step++; renderWizard(); return; }
+  var a = wz.ans;
+  if (!a.condition.length && !a.pain.length && !a.mood.length && !a.memo) {
+    delete prof().logs[wz.date];
+  } else {
+    prof().logs[wz.date] = { condition: a.condition, pain: a.pain, mood: a.mood, memo: a.memo };
+  }
+  save(); closeWizard(); renderAll(); toast("チェックを保存しました");
+}
+
+/* ============ サンプル・入出力 ============ */
+function sampleData() {
+  var t = todayStr();
+  function mk(off, dur) { var s = addDays(t, off); return { start: s, end: addDays(s, dur - 1) }; }
+  var s = defaultState();
+  s.profiles[0].periods = [mk(-84, 5), mk(-56, 6), mk(-28, 5)];
+  s.profiles[0].logs[addDays(t, -27)] = { condition: ["だるい"], pain: ["腹痛", "腰痛"], mood: ["眠い"], memo: "チョコ食べた" };
+  s.profiles[0].logs[addDays(t, -7)] = { condition: ["ふつう"], pain: [], mood: ["イライラ"], memo: "" };
+  s.profiles[1].periods = [mk(-60, 5), mk(-30, 5)];
+  return s;
+}
+function exportData() {
+  var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "seiri-note-data.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function() { URL.revokeObjectURL(a.href); }, 2000);
+}
+function importData(file) {
+  var reader = new FileReader();
+  reader.onload = function() {
+    try {
+      var s = JSON.parse(reader.result);
+      if (!s || !Array.isArray(s.profiles) || s.profiles.length !== 2) throw new Error("bad");
+      s.profiles.forEach(function(p) {
+        if (!Array.isArray(p.periods) || typeof p.logs !== "object" || !p.logs) throw new Error("bad");
+        p.periods.forEach(function(r) { if (!r.start || !r.end) throw new Error("bad"); });
+      });
+      state = s; if (state.current !== 0 && state.current !== 1) state.current = 0;
+      save(); selDate = todayStr(); renderAll(); toast("データを読み込みました");
+    } catch (e) { toast("読み込めませんでした。書き出したファイルを選んでね"); }
+  };
+  reader.readAsText(file);
+}
+
+/* ============ イベント ============ */
+$("nav-home").addEventListener("click", function() { showView("home"); });
+$("nav-records").addEventListener("click", function() { showView("records"); });
+$("nav-data").addEventListener("click", function() { showView("data"); });
+$("cal-prev").addEventListener("click", function() { viewM--; if (viewM < 0) { viewM = 11; viewY--; } renderCal(); });
+$("cal-next").addEventListener("click", function() { viewM++; if (viewM > 11) { viewM = 0; viewY++; } renderCal(); });
+$("add-btn").addEventListener("click", function() {
+  var s = $("add-start").value, e = $("add-end").value || s;
+  if (!s) { toast("開始日を選んでね"); return; }
+  if (e < s) { toast("終了日が開始日より前になっています"); return; }
+  if (prof().periods.some(function(r) { return r.start === s; })) { toast("その開始日の記録はもうあります"); return; }
+  prof().periods.push({ start: s, end: e });
+  save(); $("add-start").value = ""; $("add-end").value = "";
+  renderAll(); toast("記録を追加しました");
+});
+$("name-save").addEventListener("click", function() {
+  var n0 = $("name-0").value.trim(), n1 = $("name-1").value.trim();
+  if (n0) state.profiles[0].name = n0;
+  if (n1) state.profiles[1].name = n1;
+  save(); renderAll(); toast("名前を保存しました");
+});
+$("export-btn").addEventListener("click", exportData);
+$("import-file").addEventListener("change", function(e) {
+  if (e.target.files && e.target.files[0]) importData(e.target.files[0]);
+  e.target.value = "";
+});
+$("sample-btn").addEventListener("click", function() {
+  if (!confirm("サンプルデータに置き換えます。今の記録は消えますが大丈夫ですか？")) return;
+  state = sampleData(); save(); selDate = todayStr();
+  var t = new Date(); viewY = t.getFullYear(); viewM = t.getMonth();
+  renderAll(); showView("home"); toast("サンプルデータを入れました");
+});
+$("wipe-btn").addEventListener("click", function() {
+  if (!confirm("2人分すべての記録を消します。本当に大丈夫ですか？")) return;
+  state = defaultState(); save(); selDate = todayStr(); renderAll(); toast("全データを消しました");
+});
+$("wz-next").addEventListener("click", wizardNext);
+$("wz-back").addEventListener("click", function() { if (wz && wz.step > 0) { wz.step--; renderWizard(); } });
+$("wz-cancel").addEventListener("click", closeWizard);
+$("wizard").addEventListener("click", function(e) { if (e.target === $("wizard")) closeWizard(); });
+
+renderAll();
+</script>
+</body>
+</html>
