@@ -86,6 +86,7 @@
 
   <section id="view-home">
     <div class="card" id="status-card"></div>
+    <div class="card" id="partner-card" style="display:none"></div>
     <div class="card">
       <div class="cal-head">
         <button class="navbtn" id="cal-prev" aria-label="前の月">‹</button>
@@ -138,6 +139,14 @@
       </div>
     </div>
     <div class="card">
+      <b>表示の設定</b>
+      <label class="row" style="margin-top:8px; cursor:pointer">
+        <input type="checkbox" id="opt-partner" style="width:20px; height:20px">
+        <span>ホームに相手の様子も表示する</span>
+      </label>
+      <p class="note">ONにすると、ホーム画面に相手の「次回まであと◯日」「生理中」などの様子が小さく出ます。</p>
+    </div>
+    <div class="card">
       <b>おためし・リセット</b>
       <p class="note">サンプルは架空の記録です。どんなアプリか試すときにどうぞ。</p>
       <div class="row">
@@ -179,7 +188,7 @@
 /* ============ データ ============ */
 var LS_KEY = "seiri-note-v1";
 function defaultState() {
-  return { current: 0, profiles: [
+  return { current: 0, showPartner: false, profiles: [
     { name: "わたし", color: "#f2789f", periods: [], logs: {} },
     { name: "パートナー", color: "#8f7fe0", periods: [], logs: {} }
   ]};
@@ -197,6 +206,7 @@ function loadState() {
       if (typeof p.color !== "string") p.color = "#f2789f";
     });
     if (s.current !== 0 && s.current !== 1) s.current = 0;
+    if (typeof s.showPartner !== "boolean") s.showPartner = false;
     return s;
   } catch (e) { return defaultState(); }
 }
@@ -305,6 +315,24 @@ function renderStatus() {
   $("lg-period").style.background = p.color;
 }
 
+function renderPartner() {
+  var card = $("partner-card");
+  if (!state.showPartner) { card.style.display = "none"; card.innerHTML = ""; return; }
+  var other = state.profiles[state.current === 0 ? 1 : 0];
+  var s = statusOf(other, todayStr()), st = s.stats;
+  var line = "";
+  if (s.kind === "in") line = "生理中 " + s.day + "日目";
+  else if (s.kind === "wait") line = "次回まで あと" + s.until + "日（" + jpDate(st.nextStart) + "ごろ）";
+  else if (s.kind === "pms") line = "生理前の時期（次回は " + jpDate(st.nextStart) + " ごろ）";
+  else if (s.kind === "overdue") line = "目安から " + s.days + "日 経過";
+  else line = "まだ記録がありません";
+  card.style.display = "";
+  card.innerHTML = '<div class="status-sub">相手の様子</div>' +
+    '<div style="font-size:17px; font-weight:700; margin:2px 0">' +
+    '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; background:' + other.color + '"></span>' +
+    esc(other.name) + '：' + line + '</div>' +
+    (st.avgCycle ? '<div class="status-sub">平均周期 ' + st.avgCycle + '日</div>' : '');
+}
 function renderCal() {
   var p = prof(), st = computeStats(p);
   $("cal-title").textContent = viewY + "年" + (viewM + 1) + "月";
@@ -389,14 +417,14 @@ function renderRecords() {
 }
 
 function renderNames() { $("name-0").value = state.profiles[0].name; $("name-1").value = state.profiles[1].name; }
-function renderAll() { renderTabs(); renderStatus(); renderCal(); renderDay(); renderRecords(); }
+function renderAll() { renderTabs(); renderStatus(); renderPartner(); renderCal(); renderDay(); renderRecords(); }
 
 function showView(v) {
   ["home", "records", "data"].forEach(function(k) {
     $("view-" + k).style.display = k === v ? "" : "none";
     $("nav-" + k).classList.toggle("on", k === v);
   });
-  if (v === "data") renderNames();
+  if (v === "data") { renderNames(); $("opt-partner").checked = !!state.showPartner; }
 }
 
 /* ============ チェック入力（質問形式ウィザード） ============ */
@@ -532,6 +560,10 @@ $("sample-btn").addEventListener("click", function() {
 $("wipe-btn").addEventListener("click", function() {
   if (!confirm("2人分すべての記録を消します。本当に大丈夫ですか？")) return;
   state = defaultState(); save(); selDate = todayStr(); renderAll(); toast("全データを消しました");
+});
+$("opt-partner").addEventListener("change", function(e) {
+  state.showPartner = !!e.target.checked; save(); renderAll();
+  toast(e.target.checked ? "ホームに相手の様子を表示します" : "相手の様子を隠しました");
 });
 $("wz-next").addEventListener("click", wizardNext);
 $("wz-back").addEventListener("click", function() { if (wz && wz.step > 0) { wz.step--; renderWizard(); } });
